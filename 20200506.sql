@@ -105,6 +105,125 @@ UPDATE, DELETE : 기존에 없는걸 변경, 삭제
      2. UPDATE, DELETE 문을 실행하기전에 WHERE 절을 복사해서 SELECT 를 하여 
      영향이 가는 행을 확인
      
+     
+---------------------------------------------------------------------------
+서브쿼리를 이용한 데이터 수정;
+INSERT INTO emp (empno, ename, job) VALUES (9999, 'BROWN', NULL);
+
+9999번 직원의 deptno , job 두개의 컬럼을 smith 사원의 정보와 동일하게 변경
+UPDATE emp SET deptno = (SELECT deptno FROM emp WHERE ename = 'SMITH'),
+                  job = (SELECT job FROM emp WHERE ename = 'SMITH')
+WHERE empno = 9999;
+
+select *
+from emp
+where empno =9999;
+
+일반적인 UPDATE 구문에서는 컬럼별로 서브쿼리를 작성하여 비효율이 존재
+==> MERGE 구문을 통해 비효율을 제거 할 수 있다.
+
+ROLLBACK;
+-------------------------------------------------------------------------------
+DELETE : 테이블에 존재하는 데이터를 삭제
+구문 
+DELETE [FROM] 테이블명
+[WHERE condition]
+
+주의점
+1. 특정 컬럼만 값을 삭제 ==> 해당 컬럼을 NULL로 UPDATE
+  DELETE 절은 행 자체를 삭제
+2.UPDATE 마찬가지로 DELETE 쿼리를 실행하기 전에 SELECT를 통해 삭제 대상이되는 행을 조회, 확인하자
+
+삭제 테스트 데이터 입력
+INSERT INTO emp(empno, ename, job) VALUES (9999, 'BROWN', NULL);
+
+사번이 9999번인 행을 삭제 하는 쿼리 작성
+DELETE emp 
+WHERE empno = 9999;
+
+select *
+from emp
+where empno =9999;
+
+ROLLBACK;
+
+아래 쿼리의 의미 : EMP 테이블의 모든 행을 삭제
+DELETE emp;
+
+UPDATE, DELETE 절의 경우 테이블에 존재하는 데이터에 변경, 삭제를 하는 것이기 때문에
+대상 행을 제한하기 위해 WHERE 절을 기술할 수 있고
+WHERE 절은 SELECT 절에서 사용한 내용을 적용 할 수 있다
+예를 들어 서브쿼리를 통한 행의 제한이 가능
+
+매니저가 7698인 직원들은 모두 삭제 하고 싶을 때
+
+DELETE emp
+WHERE empno  IN
+               (SELECT EMPNO
+                FROM emp 
+                WHERE MGR = '7698');
+                
+-----------------------------------------------------------------------------
+복습 
+DML : SELECT, INSERT, UPDATE, DELETE
+WHERE 절을 사용 가능한 DML : SELECT, UPDATE, DELETE
+ 3개의 쿼리는 데이터를 식별하는 WHERE 절이 사용 될 수 있다
+ 데이터를 식별하는 속도에 따라 쿼리의 실행 성능이 좌우 됨.
+  ==> INDEX  객체를 통해 속도 향상이 가능
+ 
+ INSERT : 빈공간에 신규 데이터를 입력 하는것
+          빈공간을 식별하는게 중요
+        ==> 개발자가 할 수 있는 튜닝 포인트가 많지 않음
+        
+테이블의 데이터를 지우는 방법 (모든 데이터 지우기)
+1. DELETE : WHERE 절을 기술하지 않으면 됨
+2. TRUNCATE 
+    사용법 : TRUNCATE TABLE 테이블명
+    특 징 
+    1) 삭제시 로그를 남기지 않음 
+        ==> 복구가 불가능
+    2) 로그를 남기지 않기 때문에 실행 속도가 빠르다
+        ==> 운영환경에서는 잘 사용하지 않음 (복구가 안되기 때문에)
+          ==> 테스트 환경에서 주로 사용
+
+데이터를 복사하여 테이블 생성 - 나중에 배운다
+CREATE TABLE emp_copy AS 
+SELECT *
+FROM emp;
+
+select *
+from emp_copy
+
+emp_copy 테이블을  TRUNCATE 명령을 통해 모든 데이터를 삭제
+TRUNCATE TABLE emp_copy;
+
+ROLLBACK;
+
+---------------------------------------------------------------
+트랜잭션 : 논리적인 일의 단위
+EX) ATM - 출금과 입금이 둘다 정상적으로 이루어져야 문제가 발생되지 않음
+          출금은 정상 처리 되었지만 입금이 비정상 처리 되었다면
+          정상 처리된 출금도 취소를 해줘야 한다.
+
+
+오라클에서는 첫번째 DML이 시작이 되면 트랜의 시작으로 인식
+트랜잭션의 ROLLBACK, COMMIT 을 통해 종료가 된다
+
+트랜잭션 종료후 새로운 DML이 실행되면 새로운 트랜잭션이 시작
+
+평소 사용하는 게시판을 생각해보자
+게시글 입력할 때 입력 하는것  : 제목(1개), 내용(1개), 첨부파일(복수가능)
+RDBMS에서는 속성이 중복될 경우 별도의 엔터티(테이블)로 분리를 한다.
+게시글 테이블(제목, 내용)/ 게시글 첨부파일 테이블 (첨부파일에 대한 정보)
+
+게시글을 하나 등록을 하더라도
+게시글 테이블과, 게시글 첨부파일 테이블에 데이터를 신규로 등록을 한다.
+INSERT INT 게시글 테이블 (제목, 내용, 등록자, 등록일시) VALUES(......);
+INSERT INT 게시글 첨부파일 테이블 (첨부파일명, 첨부파일 사이즈) VALUES(......);
+
+두개의 INSERT 쿼리가 게시글 등록의 트랜잭션 단위
+즉 두개중에 하나라도 문제가 생기면 일반적으로 ROLLBACK을 통해 두 개의 INSERT 구문을 취소
+     
 
 
 
